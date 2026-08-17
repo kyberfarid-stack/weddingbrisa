@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import useSiteConfig from "../../lib/useSiteConfig";
+import { compressFile, canvasToCompressedOutput } from "../../lib/compressImage";
+
+// Foto tamu di-cap ke lebar maksimal ini sebelum di-encode — kamera HP modern
+// bisa 3000-4000px lebar, jauh lebih besar dari yang dibutuhkan hasil akhir
+// (canvas hasil cuma 1080px), jadi men-downscale di sini bikin upload & load
+// jauh lebih cepat tanpa kelihatan bedanya di hasil akhir.
+const CAPTURE_MAX_DIM = 1600;
 
 export default function Capture() {
   const router = useRouter();
@@ -80,28 +87,36 @@ export default function Capture() {
   function takePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) return;
+    let w = video.videoWidth;
+    let h = video.videoHeight;
+    if (Math.max(w, h) > CAPTURE_MAX_DIM) {
+      const scale = CAPTURE_MAX_DIM / Math.max(w, h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
     // mirror if front camera for natural selfie look
     if (facingMode === "user") {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    ctx.drawImage(video, 0, 0, w, h);
+    const { dataUrl } = canvasToCompressedOutput(canvas, 0.85);
     finishOrContinue([...shots, dataUrl]);
   }
 
-  function handleUpload(e) {
+  async function handleUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      finishOrContinue([...shots, reader.result]);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressFile(file, { maxDim: CAPTURE_MAX_DIM, quality: 0.85 });
+      finishOrContinue([...shots, dataUrl]);
+    } catch (err) {
+      setError("Gagal memproses foto dari galeri, coba lagi.");
+    }
     e.target.value = "";
   }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import HomepageView from "../../components/HomepageView";
+import { compressFile } from "../../lib/compressImage";
 
 export default function Admin() {
   const router = useRouter();
@@ -167,7 +168,7 @@ function GuestsTab({ event, adminKey }) {
             {guests.map((g, i) => (
               <tr key={i}>
                 <td>
-                  <img src={g.photoUrl} className="guest-photo-thumb" alt={g.name} />
+                  <img src={g.photoUrl} className="guest-photo-thumb" alt={g.name} loading="lazy" decoding="async" />
                 </td>
                 <td>{g.name}</td>
                 <td>{g.templateId}</td>
@@ -217,6 +218,14 @@ const emptyTemplate = {
   textColor: "#333333",
   accent: "#d4af37",
   sortOrder: 0,
+  // bgFitMode "auto" = perilaku lama, canvas ikut tinggi gambar background
+  // apa adanya (tidak pernah di-crop). "crop" = canvas dibatasi setinggi
+  // jumlah foto yang dipilih tamu, background di-crop vertikal mengikuti
+  // cropAnchor — supaya 1 gambar background tinggi (misal desain 1x3) bisa
+  // dipakai ulang buat hasil 1 foto tanpa background jadi gepeng/stretch.
+  bgFitMode: "auto",
+  cropAnchor: "bottom",
+  filmRail: false,
 };
 
 function TemplatesTab({ event, adminKey }) {
@@ -240,27 +249,24 @@ function TemplatesTab({ event, adminKey }) {
   }
 
   async function uploadImage(file, onDone) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setStatus("Mengupload gambar...");
-      try {
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: adminKey, event, dataUrl: reader.result, folder: "templates" }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          onDone(data.url);
-          setStatus("");
-        } else {
-          setStatus("Gagal upload: " + (data.error || ""));
-        }
-      } catch (e) {
-        setStatus("Gagal upload gambar.");
+    setStatus("Mengompres & mengupload gambar...");
+    try {
+      const dataUrl = await compressFile(file, { maxDim: 2200, quality: 0.85 });
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: adminKey, event, dataUrl, folder: "templates" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onDone(data.url);
+        setStatus("");
+      } else {
+        setStatus("Gagal upload: " + (data.error || ""));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      setStatus("Gagal upload gambar.");
+    }
   }
 
   async function handleSave() {
@@ -342,6 +348,46 @@ function TemplatesTab({ event, adminKey }) {
           onChange={(e) => e.target.files[0] && uploadImage(e.target.files[0], (url) => setEditing((cur) => ({ ...cur, overlayUrl: url })))}
         />
 
+        <label className="field-label" style={{ marginTop: 16 }}>
+          Mode Background/Overlay
+        </label>
+        <select
+          value={editing.bgFitMode || "auto"}
+          onChange={(e) => setEditing({ ...editing, bgFitMode: e.target.value })}
+          style={{ marginBottom: 4, width: "100%", padding: "12px 14px", borderRadius: 12, border: "2px solid #e5ddd0" }}
+        >
+          <option value="auto">Auto (tinggi canvas ikut gambar, tidak pernah dipotong)</option>
+          <option value="crop">Crop (tinggi canvas ikut jumlah foto, gambar dipotong biar tidak stretch)</option>
+        </select>
+        <p className="hp-tip">
+          Pakai "Crop" kalau mau 1 gambar background tinggi (desain 3 foto) dipakai ulang buat hasil 1 foto — bagian yang kelihatan diatur di bawah.
+        </p>
+
+        {editing.bgFitMode === "crop" && (
+          <>
+            <label className="field-label">Titik Potong Gambar</label>
+            <select
+              value={editing.cropAnchor || "bottom"}
+              onChange={(e) => setEditing({ ...editing, cropAnchor: e.target.value })}
+              style={{ marginBottom: 16, width: "100%", padding: "12px 14px", borderRadius: 12, border: "2px solid #e5ddd0" }}
+            >
+              <option value="top">Atas (potong dari bawah, bagian atas gambar tetap kelihatan)</option>
+              <option value="center">Tengah</option>
+              <option value="bottom">Bawah (potong dari atas, bagian bawah/kredit tetap kelihatan)</option>
+            </select>
+          </>
+        )}
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={!!editing.filmRail}
+            onChange={(e) => setEditing({ ...editing, filmRail: e.target.checked })}
+            style={{ width: "auto", marginBottom: 0 }}
+          />
+          <span>Aksen roll film di pinggir kiri-kanan (otomatis digambar, bikin potongan tidak kelihatan janggal)</span>
+        </label>
+
         {status && <p className="footer-note">{status}</p>}
 
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
@@ -365,8 +411,8 @@ function TemplatesTab({ event, adminKey }) {
         {templates.map((t) => (
           <div className="admin-template-card" key={t.id}>
             <div className="admin-template-thumb" style={{ background: t.backgroundColor || "#eee" }}>
-              {t.backgroundUrl && <img src={t.backgroundUrl} alt={t.name} />}
-              {t.overlayUrl && <img src={t.overlayUrl} alt="" className="admin-template-overlay" />}
+              {t.backgroundUrl && <img src={t.backgroundUrl} alt={t.name} loading="lazy" decoding="async" />}
+              {t.overlayUrl && <img src={t.overlayUrl} alt="" className="admin-template-overlay" loading="lazy" decoding="async" />}
             </div>
             <div style={{ flex: 1 }}>
               <strong>{t.name}</strong>
@@ -418,13 +464,13 @@ function SettingsTab({ event, adminKey }) {
   }
 
   async function uploadHeroImage(file) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setStatus("Mengupload gambar...");
+    setStatus("Mengompres & mengupload gambar...");
+    try {
+      const dataUrl = await compressFile(file, { maxDim: 1800, quality: 0.85 });
       const res = await fetch("/api/admin/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: adminKey, event, dataUrl: reader.result, folder: "hero" }),
+        body: JSON.stringify({ key: adminKey, event, dataUrl, folder: "hero" }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -433,8 +479,9 @@ function SettingsTab({ event, adminKey }) {
       } else {
         setStatus("Gagal upload: " + (data.error || ""));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      setStatus("Gagal upload gambar.");
+    }
   }
 
   async function handleSave() {
@@ -912,27 +959,24 @@ function HomepageTab({ event, adminKey }) {
   }
 
   async function uploadImage(file, onDone) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setStatus("Mengupload gambar...");
-      try {
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: adminKey, event, dataUrl: reader.result, folder: "homepage" }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          onDone(data.url);
-          setStatus("");
-        } else {
-          setStatus("Gagal upload: " + (data.error || ""));
-        }
-      } catch (e) {
-        setStatus("Gagal upload gambar.");
+    setStatus("Mengompres & mengupload gambar...");
+    try {
+      const dataUrl = await compressFile(file, { maxDim: 1800, quality: 0.85 });
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: adminKey, event, dataUrl, folder: "homepage" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onDone(data.url);
+        setStatus("");
+      } else {
+        setStatus("Gagal upload: " + (data.error || ""));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      setStatus("Gagal upload gambar.");
+    }
   }
 
   async function handleSave() {

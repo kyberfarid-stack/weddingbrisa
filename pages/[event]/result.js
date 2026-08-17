@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import useSiteConfig from "../../lib/useSiteConfig";
+import { canvasToCompressedOutput } from "../../lib/compressImage";
+
+const CROP_ANCHOR_Y = { top: 0, center: 0.5, bottom: 1 };
 
 const CANVAS_W = 1080;
 // Ukuran kotak foto strip (>1 foto) dibuat mendekati persegi — gaya strip
@@ -112,11 +115,19 @@ export default function Result() {
       count <= 1 ? (CANVAS_W - outerPad * 2) * 1.05 : count * stripW + (count - 1) * STRIP_GAP;
     const neededCanvasH = outerPad + neededSlotsH + footerHeight;
 
+    // bgFitMode "auto" (default, perilaku lama): canvas selalu tumbuh mengikuti
+    // rasio asli gambar background, jadi background TIDAK PERNAH di-crop.
+    // bgFitMode "crop": canvas tetap setinggi kebutuhan slot foto (sesuai jumlah
+    // foto tamu), dan background di-crop vertikal mengikuti cropAnchor — ini yang
+    // dipakai kalau 1 gambar background didesain tinggi (misal buat 1x3) tapi mau
+    // dipakai juga buat 1x1/1x2, dengan bagian bawah (kredit nama) selalu kelihatan.
+    const bgFitMode = template.bgFitMode || "auto";
+    const bgAnchorY = CROP_ANCHOR_Y[template.cropAnchor] ?? 1;
+
     let canvasH = neededCanvasH;
-    if (bgImg) {
-      // Kalau template punya background custom, coba ikuti rasio ASLI gambar itu
-      // supaya bingkai tidak "ketarik" distorsi — tapi tidak pernah lebih pendek
-      // dari kebutuhan slot foto (baris di bawah ambil yang lebih besar).
+    if (bgImg && bgFitMode !== "crop") {
+      // Ikuti rasio ASLI gambar itu supaya bingkai tidak "ketarik" distorsi —
+      // tapi tidak pernah lebih pendek dari kebutuhan slot foto.
       const bgNaturalH = Math.round(CANVAS_W * (bgImg.height / bgImg.width));
       canvasH = Math.max(neededCanvasH, bgNaturalH);
     }
@@ -130,7 +141,7 @@ export default function Result() {
     // 1. Background — pakai cover-fit (potong rapi, TIDAK ditarik/distorsi) supaya
     // aman walau canvas akhirnya lebih tinggi dari rasio asli gambar background.
     if (bgImg) {
-      drawImageCover(ctx, bgImg, 0, 0, CANVAS_W, canvasH);
+      drawImageCover(ctx, bgImg, 0, 0, CANVAS_W, canvasH, bgAnchorY);
     } else {
       ctx.fillStyle = template.backgroundColor || "#ffffff";
       ctx.fillRect(0, 0, CANVAS_W, canvasH);
@@ -151,9 +162,11 @@ export default function Result() {
     });
 
     // 3. Overlay / bingkai transparan di atas foto — cover-fit juga (bukan stretch
-    // paksa) supaya bingkai overlay tidak pernah gepeng/distorsi.
+    // paksa) supaya bingkai overlay tidak pernah gepeng/distorsi. Pakai anchor yang
+    // sama dengan background supaya elemen overlay (misal teks kredit di PNG-nya)
+    // tetap selaras dengan background waktu di-crop.
     if (overlayImg) {
-      drawImageCover(ctx, overlayImg, 0, 0, CANVAS_W, canvasH);
+      drawImageCover(ctx, overlayImg, 0, 0, CANVAS_W, canvasH, bgAnchorY);
     }
 
     // 4. Teks
@@ -172,9 +185,18 @@ export default function Result() {
     ctx.font = "italic 22px 'Playfair Display', serif";
     ctx.fillStyle = template.textColor || "#333333";
     ctx.fillText(`- ${name} -`, CANVAS_W / 2, nameY + 140);
+
+    // 5. Aksen roll film di pinggir kiri-kanan (opsional per template) — digambar
+    // paling akhir supaya selalu jadi "bingkai" terluar yang rapi, dan sekalian
+    // menyamarkan kalau ada crop background yang kurang pas di tepi.
+    if (template.filmRail) {
+      drawFilmRail(ctx, CANVAS_W, canvasH);
+    }
   }
 
-  function drawImageCover(ctx, img, x, y, w, h) {
+  // anchorY: 0 = rata atas gambar sumber (bagian bawah gambar yang terpotong),
+  // 1 = rata bawah gambar sumber (bagian atas yang terpotong), 0.5 = tengah.
+  function drawImageCover(ctx, img, x, y, w, h, anchorY = 0.5) {
     if (!img) return;
     const imgRatio = img.width / img.height;
     const boxRatio = w / h;
@@ -188,9 +210,38 @@ export default function Result() {
       sw = img.width;
       sh = sw / boxRatio;
       sx = 0;
-      sy = (img.height - sh) / 2;
+      sy = (img.height - sh) * anchorY;
     }
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  }
+
+  // Bingkai dekoratif ala roll film (rel gelap + lubang perforasi) di sisi
+  // kiri-kanan canvas. Karena selalu digambar solid di atas segalanya, tepi
+  // background yang di-crop jadi tidak pernah kelihatan "mentah" atau ketarik.
+  function drawFilmRail(ctx, canvasW, canvasH) {
+    const railW = 34;
+    const holeW = 14;
+    const holeH = 20;
+    const holeGap = 46;
+    ctx.save();
+    ctx.fillStyle = "#141414";
+    ctx.fillRect(0, 0, railW, canvasH);
+    ctx.fillRect(canvasW - railW, 0, railW, canvasH);
+    ctx.fillStyle = "rgba(244, 237, 228, 0.92)";
+    [railW / 2, canvasW - railW / 2].forEach((cx) => {
+      for (let cy = holeGap / 2; cy < canvasH; cy += holeGap) {
+        const hx = cx - holeW / 2;
+        const hy = cy - holeH / 2;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(hx, hy, holeW, holeH, 3);
+          ctx.fill();
+        } else {
+          ctx.fillRect(hx, hy, holeW, holeH);
+        }
+      }
+    });
+    ctx.restore();
   }
 
   function drawCorners(ctx, x, y, w, h, color) {
@@ -225,11 +276,11 @@ export default function Result() {
   async function handleSaveAndDownload() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+    const { dataUrl, ext } = canvasToCompressedOutput(canvas, 0.9);
 
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = `${site.coupleName.replace(/\s/g, "-")}-${guestName.replace(/\s/g, "-")}.jpg`;
+    a.download = `${site.coupleName.replace(/\s/g, "-")}-${guestName.replace(/\s/g, "-")}.${ext}`;
     a.click();
 
     persistGuest(dataUrl);
@@ -260,19 +311,24 @@ export default function Result() {
   async function handleShare() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], "photobooth.jpg", { type: "image/jpeg" });
-      try {
-        await navigator.share({
-          files: [file],
-          title: site.coupleName,
-          text: `Momen fotobooth di pernikahan ${site.coupleName}`,
-        });
-      } catch (e) {
-        // user cancelled share, no-op
-      }
-    }, "image/jpeg", 0.95);
-    persistGuest(canvas.toDataURL("image/jpeg", 0.95));
+    const { dataUrl, mime, ext } = canvasToCompressedOutput(canvas, 0.9);
+    canvas.toBlob(
+      async (blob) => {
+        const file = new File([blob], `photobooth.${ext}`, { type: mime });
+        try {
+          await navigator.share({
+            files: [file],
+            title: site.coupleName,
+            text: `Momen fotobooth di pernikahan ${site.coupleName}`,
+          });
+        } catch (e) {
+          // user cancelled share, no-op
+        }
+      },
+      mime,
+      0.9
+    );
+    persistGuest(dataUrl);
   }
 
   function handleRetake() {
@@ -333,7 +389,7 @@ export default function Result() {
             <div className="gallery-grid">
               {gallery.map((g, i) => (
                 <div className="gallery-item" key={i}>
-                  <img src={g.photoUrl} alt={g.name} className="gallery-photo" />
+                  <img src={g.photoUrl} alt={g.name} className="gallery-photo" loading="lazy" decoding="async" />
                   {g.voiceUrl && (
                     <audio controls src={g.voiceUrl} className="gallery-audio" />
                   )}
