@@ -22,20 +22,25 @@ function getInitials(coupleName) {
   return [words[0]?.[0]?.toUpperCase() || "A", (words[words.length - 1]?.[0] || "B").toUpperCase()];
 }
 
-export default function GuestCoverView({
+// PENTING: komponen ini HARUS didefinisikan di luar (top-level), bukan di
+// dalam GuestCoverView. Kalau didefinisikan ulang di setiap render (seperti
+// versi sebelumnya), React menganggapnya komponen baru tiap kali state
+// berubah → input di-mount ulang → autoFocus di kolom nama ke-trigger lagi
+// dan menarik fokus balik ke sana tiap kamu ngetik di kolom kesan. Ini yang
+// menyebabkan bug "tiap ngisi ucapan teks balik ke nama".
+function GuestForm({
   site,
-  name = "",
-  message = "",
+  name,
+  message,
   onNameChange,
   onMessageChange,
   onSubmit,
-  interactive = true,
+  interactive,
+  accent,
+  inputClass,
+  labelClass,
+  btnClass,
 }) {
-  const style = site.coverStyle || "luxury-minimal";
-  const [initialA, initialB] = getInitials(site.coupleName);
-  const accent = site.theme?.primary || "#7a1f2b";
-  const accentSoft = site.theme?.accent || "#d4af37";
-
   const fieldsDisabled = !interactive;
 
   function handleSubmit(e) {
@@ -43,7 +48,7 @@ export default function GuestCoverView({
     if (interactive && onSubmit) onSubmit();
   }
 
-  const Form = ({ inputClass, labelClass, btnClass }) => (
+  return (
     <form onSubmit={handleSubmit}>
       <label className={labelClass || "field-label"}>{site.entryLabel}</label>
       <input
@@ -69,6 +74,32 @@ export default function GuestCoverView({
       </button>
     </form>
   );
+}
+
+export default function GuestCoverView({
+  site,
+  name = "",
+  message = "",
+  onNameChange,
+  onMessageChange,
+  onSubmit,
+  interactive = true,
+}) {
+  const style = site.coverStyle || "luxury-minimal";
+  const [initialA, initialB] = getInitials(site.coupleName);
+  const accent = site.theme?.primary || "#7a1f2b";
+  const accentSoft = site.theme?.accent || "#d4af37";
+
+  const formProps = {
+    site,
+    name,
+    message,
+    onNameChange,
+    onMessageChange,
+    onSubmit,
+    interactive,
+    accent,
+  };
 
   // ---------------------------------------------------------------
   // 1. Luxury Minimal — gelap, emas, elegan (gaya default lama)
@@ -88,7 +119,7 @@ export default function GuestCoverView({
           <p className="gc-luxury-meta">{site.weddingDate}</p>
           <p className="gc-luxury-meta">{site.venue}</p>
           <p className="gc-luxury-msg">{site.welcomeMessage}</p>
-          <Form inputClass="gc-luxury-input" btnClass="gc-luxury-btn" />
+          <GuestForm {...formProps} inputClass="gc-luxury-input" btnClass="gc-luxury-btn" />
         </div>
       </div>
     );
@@ -117,7 +148,7 @@ export default function GuestCoverView({
             {site.weddingDate} &middot; {site.venue}
           </p>
           <p className="gc-floral-msg">{site.welcomeMessage}</p>
-          <Form inputClass="gc-floral-input" btnClass="gc-floral-btn" />
+          <GuestForm {...formProps} inputClass="gc-floral-input" btnClass="gc-floral-btn" />
           <span className="gc-floral-corner gc-floral-corner-bl">🌸</span>
           <span className="gc-floral-corner gc-floral-corner-br">🌿</span>
         </div>
@@ -146,7 +177,7 @@ export default function GuestCoverView({
               {site.weddingDate} &middot; {site.venue}
             </p>
             <p className="gc-photo-msg">{site.welcomeMessage}</p>
-            <Form inputClass="gc-photo-input" btnClass="gc-photo-btn" />
+            <GuestForm {...formProps} inputClass="gc-photo-input" btnClass="gc-photo-btn" />
           </div>
         </div>
       </div>
@@ -175,7 +206,7 @@ export default function GuestCoverView({
               {site.weddingDate} &middot; {site.venue}
             </p>
             <p className="gc-vintage-msg">{site.welcomeMessage}</p>
-            <Form inputClass="gc-vintage-input" btnClass="gc-vintage-btn" />
+            <GuestForm {...formProps} inputClass="gc-vintage-input" btnClass="gc-vintage-btn" />
           </div>
         </div>
       </div>
@@ -201,7 +232,7 @@ export default function GuestCoverView({
           {site.weddingDate} &middot; {site.venue}
         </p>
         <p className="gc-modern-msg">{site.welcomeMessage}</p>
-        <Form inputClass="gc-modern-input" btnClass="gc-modern-btn" />
+        <GuestForm {...formProps} inputClass="gc-modern-input" btnClass="gc-modern-btn" />
       </div>
     </div>
   );
