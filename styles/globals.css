@@ -1319,3 +1319,455 @@ td {
     height: 420px;
   }
 }
+
+/* ==================== Guest Cover Styles (halaman tamu) ==================== */
+/* 5 gaya cover yang bisa dipilih admin di Pengaturan Situs > Gaya Halaman
+   Tamu. Dipakai bareng oleh pages/[event]/index.js (versi interaktif) dan
+   admin.js SettingsTab (versi pratinjau) lewat components/GuestCoverView.js
+   supaya preview di admin selalu sama persis dengan yang tamu lihat. */
+
+.gc-wrap {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.gc-wrap input,
+.gc-wrap textarea {
+  font-family: inherit;
+}
+
+/* ---- 1. Luxury Minimal ---- */
+.gc-luxury {
+  background: radial-gradient(circle at 50% 0%, #2a1218 0%, #17080c 60%, #0d0507 100%);
+}
+.gc-luxury-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 20px;
+  padding: 40px 28px;
+  backdrop-filter: blur(6px);
+}
+.gc-luxury-hero {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 18px;
+  border: 2px solid rgba(212, 175, 55, 0.5);
+}
+.gc-luxury-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.gc-luxury-name {
+  font-size: 2.1rem;
+  margin: 0 0 14px;
+  line-height: 1.2;
+}
+.gc-luxury-divider {
+  width: 56px;
+  height: 2px;
+  margin: 0 auto 18px;
+  opacity: 0.6;
+}
+.gc-luxury-meta {
+  color: rgba(244, 237, 228, 0.75);
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+}
+.gc-luxury-msg {
+  color: rgba(244, 237, 228, 0.55);
+  font-size: 0.9rem;
+  margin: 14px 0 22px;
+}
+.gc-luxury-input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4ede4;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  outline: none;
+  resize: vertical;
+}
+.gc-luxury-input::placeholder {
+  color: rgba(244, 237, 228, 0.35);
+}
+.gc-luxury-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e9c46a, #d4af37);
+  color: #2a1610;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* ---- 2. Elegant Floral ---- */
+.gc-floral {
+  background: radial-gradient(circle at 50% 0%, #fffaf1 0%, #faf3e6 55%, #f4ecdc 100%);
+}
+.gc-floral-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid #eadfc6;
+  border-radius: 24px;
+  padding: 48px 28px 32px;
+  box-shadow: 0 16px 40px rgba(122, 31, 43, 0.08);
+}
+.gc-floral-corner {
+  position: absolute;
+  font-size: 1.8rem;
+  opacity: 0.85;
+}
+.gc-floral-corner-tl {
+  top: 10px;
+  left: 14px;
+  transform: rotate(-15deg);
+}
+.gc-floral-corner-tr {
+  top: 10px;
+  right: 14px;
+  transform: rotate(15deg) scaleX(-1);
+}
+.gc-floral-corner-bl {
+  bottom: 10px;
+  left: 14px;
+  transform: rotate(15deg) scaleX(-1);
+}
+.gc-floral-corner-br {
+  bottom: 10px;
+  right: 14px;
+  transform: rotate(-15deg);
+}
+.gc-floral-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #a88b5a;
+  margin: 0 0 18px;
+}
+.gc-floral-monogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 3rem;
+  margin-bottom: 6px;
+}
+.gc-floral-monogram-sep {
+  font-size: 1.3rem;
+  opacity: 0.8;
+}
+.gc-floral-name {
+  font-size: 1.5rem;
+  margin: 0 0 14px;
+}
+.gc-floral-meta {
+  color: #8a8070;
+  font-size: 0.85rem;
+  margin: 0 0 4px;
+}
+.gc-floral-msg {
+  color: #a39a89;
+  font-size: 0.88rem;
+  margin: 12px 0 22px;
+}
+.gc-floral-input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 2px solid #eadfc6;
+  background: #fffdf9;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  outline: none;
+  resize: vertical;
+}
+.gc-floral-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c9a24a, #a88b3f);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* ---- 3. Photo Hero ---- */
+.gc-photo {
+  background: #0c0c0e;
+  padding: 0;
+}
+.gc-photo-card {
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px 26px 34px;
+}
+.gc-photo-top {
+  text-align: center;
+}
+.gc-photo-kicker {
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin: 0;
+}
+.gc-photo-bottom {
+  text-align: center;
+}
+.gc-photo-name {
+  color: #fff;
+  font-size: 2rem;
+  margin: 0 0 10px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+.gc-photo-meta {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.88rem;
+  margin: 0 0 4px;
+}
+.gc-photo-msg {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.88rem;
+  margin: 10px 0 18px;
+}
+.gc-photo-input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  outline: none;
+  resize: vertical;
+}
+.gc-photo-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+.gc-photo-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: #241016;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* ---- 4. Vintage Frame ---- */
+.gc-vintage {
+  background: radial-gradient(circle at 50% 20%, #efe3c8 0%, #e2d2ad 55%, #d5c093 100%);
+}
+.gc-vintage-outer {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid rgba(90, 62, 30, 0.35);
+  border-radius: 4px;
+  padding: 10px;
+}
+.gc-vintage-inner {
+  border: 1px solid rgba(90, 62, 30, 0.35);
+  border-radius: 2px;
+  padding: 36px 24px 28px;
+  background: rgba(255, 252, 240, 0.55);
+}
+.gc-vintage-photo-wrap {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(90, 62, 30, 0.35);
+}
+.gc-vintage-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gc-vintage-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b5231;
+  margin: 0 0 10px;
+}
+.gc-vintage-name {
+  font-family: "Playfair Display", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1.7rem;
+  margin: 0 0 8px;
+}
+.gc-vintage-tagline {
+  font-style: italic;
+  color: #6b5231;
+  font-size: 0.85rem;
+  margin: 0 0 14px;
+}
+.gc-vintage-meta {
+  color: #6b5231;
+  font-size: 0.85rem;
+  margin: 0 0 4px;
+}
+.gc-vintage-msg {
+  color: #7a6642;
+  font-size: 0.88rem;
+  margin: 12px 0 22px;
+}
+.gc-vintage-input {
+  width: 100%;
+  padding: 13px 15px;
+  border-radius: 2px;
+  border: 1px solid rgba(90, 62, 30, 0.35);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  outline: none;
+  resize: vertical;
+}
+.gc-vintage-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: 1px solid #6b5231;
+  border-radius: 2px;
+  background: transparent;
+  color: #4a3a20;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ---- 5. Modern Minimal ---- */
+.gc-modern {
+  background: #fdfbf7;
+}
+.gc-modern-blob {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.35;
+  z-index: 0;
+}
+.gc-modern-blob-1 {
+  top: -80px;
+  left: -80px;
+}
+.gc-modern-blob-2 {
+  bottom: -100px;
+  right: -100px;
+}
+.gc-modern-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 28px;
+  padding: 40px 26px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+}
+.gc-modern-hero {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+.gc-modern-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.gc-modern-name {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+  color: #1a1a1a;
+}
+.gc-modern-meta {
+  color: #777;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.gc-modern-msg {
+  color: #999;
+  font-size: 0.88rem;
+  margin: 12px 0 22px;
+}
+.gc-modern-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 2px solid #f0ede6;
+  background: #faf9f6;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  outline: none;
+  resize: vertical;
+  font-weight: 500;
+}
+.gc-modern-btn {
+  width: 100%;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffd76a, #d4af37);
+  color: #2a1610;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* Skala kecil dipakai di admin preview panel */
+.settings-preview-inner .gc-wrap {
+  min-height: auto;
+  padding: 24px 16px;
+}
+.settings-preview-inner .gc-photo-card {
+  min-height: 480px;
+}
