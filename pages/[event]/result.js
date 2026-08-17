@@ -4,6 +4,10 @@ import Head from "next/head";
 import useSiteConfig from "../../lib/useSiteConfig";
 
 const CANVAS_W = 1080;
+// Ukuran kotak foto strip (>1 foto) dibuat mendekati persegi — gaya strip
+// photobooth klasik (sel foto rapat & kotak), bukan landscape lebar.
+const STRIP_SLOT = 760;
+const STRIP_GAP = 22;
 
 export default function Result() {
   const router = useRouter();
@@ -62,29 +66,33 @@ export default function Result() {
     });
   }
 
-  // Kalau template punya background/overlay custom, tinggi canvas mengikuti
-  // rasio ASLI gambar itu (bukan dihitung dari jumlah foto) supaya bingkai/frame
-  // tidak pernah "ketarik"/distorsi walau tamu ambil 1, 2, atau 3 foto sekaligus.
-  // Slot foto lalu dibagi rata di dalam ruang yang tersisa pada canvas tetap itu.
+  // Slot foto selalu dapat ukuran yang enak buat wajah tamu (tidak gepeng/kependekan)
+  // — ukurannya TIDAK dikorbankan demi muat ke bingkai. Kalau bingkai custom lebih
+  // pendek dari yang dibutuhkan slot foto, canvas-nya yang menyesuaikan jadi lebih
+  // tinggi (bukan slot fotonya yang dipepetin).
   function computeLayout(count, canvasH, footerHeight, outerPad) {
     const photoAreaTop = outerPad;
     const photoAreaBottom = canvasH - footerHeight;
-    const photoAreaH = Math.max(photoAreaBottom - photoAreaTop, 40);
+    const photoAreaH = photoAreaBottom - photoAreaTop;
 
     if (count <= 1) {
       const w = CANVAS_W - outerPad * 2;
-      const h = Math.min(photoAreaH, w * 1.05);
-      const y = photoAreaTop + (photoAreaH - h) / 2;
+      const h = w * 1.05;
+      const extra = Math.max(photoAreaH - h, 0);
+      const y = photoAreaTop + extra / 2;
       return { slots: [{ x: outerPad, y, w, h }], footerY: photoAreaBottom };
     }
 
-    const stripW = Math.min(700, CANVAS_W - outerPad * 2);
+    const stripW = Math.min(STRIP_SLOT, CANVAS_W - outerPad * 2);
     const stripX = (CANVAS_W - stripW) / 2;
-    const gap = 22;
-    const slotH = Math.max((photoAreaH - gap * (count - 1)) / count, 40);
+    const slotH = stripW;
+    const gap = STRIP_GAP;
+    const neededH = count * slotH + (count - 1) * gap;
+    const extra = Math.max(photoAreaH - neededH, 0);
+    const startY = photoAreaTop + extra / 2;
     const slots = [];
     for (let i = 0; i < count; i++) {
-      slots.push({ x: stripX, y: photoAreaTop + i * (slotH + gap), w: stripW, h: slotH });
+      slots.push({ x: stripX, y: startY + i * (slotH + gap), w: stripW, h: slotH });
     }
     return { slots, footerY: photoAreaBottom };
   }
@@ -95,28 +103,32 @@ export default function Result() {
     const isPolaroid = !bgImg && template.style === "polaroid";
     const outerPad = isPolaroid ? 60 : 90;
     const footerHeight = (isPolaroid ? 100 : 110) + 140 + 40;
+    const count = images.length;
 
-    let canvasH;
+    // Tinggi canvas yang dibutuhkan supaya slot foto tetap berukuran enak (lihat
+    // computeLayout di atas) — ini batas MINIMUM, bukan target akhir.
+    const stripW = Math.min(STRIP_SLOT, CANVAS_W - outerPad * 2);
+    const neededSlotsH =
+      count <= 1 ? (CANVAS_W - outerPad * 2) * 1.05 : count * stripW + (count - 1) * STRIP_GAP;
+    const neededCanvasH = outerPad + neededSlotsH + footerHeight;
+
+    let canvasH = neededCanvasH;
     if (bgImg) {
-      // Pertahankan rasio asli gambar background supaya tidak stretch.
-      canvasH = Math.round(CANVAS_W * (bgImg.height / bgImg.width));
-      const minH = outerPad * 2 + footerHeight + 200;
-      if (canvasH < minH) canvasH = minH;
-    } else {
-      // Tanpa background custom: canvas tetap mengikuti jumlah foto seperti sebelumnya.
-      const count = images.length;
-      const baseSlotH = count <= 1 ? (CANVAS_W - outerPad * 2) * 1.05 : 440 * count + 22 * (count - 1);
-      canvasH = outerPad + baseSlotH + footerHeight;
+      // Kalau template punya background custom, coba ikuti rasio ASLI gambar itu
+      // supaya bingkai tidak "ketarik" distorsi — tapi tidak pernah lebih pendek
+      // dari kebutuhan slot foto (baris di bawah ambil yang lebih besar).
+      const bgNaturalH = Math.round(CANVAS_W * (bgImg.height / bgImg.width));
+      canvasH = Math.max(neededCanvasH, bgNaturalH);
     }
 
-    const { slots, footerY } = computeLayout(images.length, canvasH, footerHeight, outerPad);
+    const { slots, footerY } = computeLayout(count, canvasH, footerHeight, outerPad);
 
     canvas.width = CANVAS_W;
     canvas.height = canvasH;
     const ctx = canvas.getContext("2d");
 
-    // 1. Background — digambar penuh mengikuti rasio aslinya sendiri (canvasH sudah
-    // disesuaikan di atas), jadi drawImageCover di sini praktis tidak memotong apa pun.
+    // 1. Background — pakai cover-fit (potong rapi, TIDAK ditarik/distorsi) supaya
+    // aman walau canvas akhirnya lebih tinggi dari rasio asli gambar background.
     if (bgImg) {
       drawImageCover(ctx, bgImg, 0, 0, CANVAS_W, canvasH);
     } else {
@@ -138,9 +150,10 @@ export default function Result() {
       }
     });
 
-    // 3. Overlay / bingkai transparan di atas foto
+    // 3. Overlay / bingkai transparan di atas foto — cover-fit juga (bukan stretch
+    // paksa) supaya bingkai overlay tidak pernah gepeng/distorsi.
     if (overlayImg) {
-      ctx.drawImage(overlayImg, 0, 0, CANVAS_W, canvasH);
+      drawImageCover(ctx, overlayImg, 0, 0, CANVAS_W, canvasH);
     }
 
     // 4. Teks
