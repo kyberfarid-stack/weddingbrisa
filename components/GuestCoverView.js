@@ -103,6 +103,7 @@ export default function GuestCoverView({
         <div className="gc-floral-card">
           <span className="gc-floral-corner gc-floral-corner-tl">🌿</span>
           <span className="gc-floral-corner gc-floral-corner-tr">🌸</span>
+          {site.heroImageUrl && <img src={site.heroImageUrl} className="gc-floral-photo" alt="" />}
           <p className="gc-floral-kicker">{site.kickerText}</p>
           <div className="gc-floral-monogram" style={{ color: accent }}>
             <span style={{ fontFamily: site.fontHeading }}>{initialA}</span>
