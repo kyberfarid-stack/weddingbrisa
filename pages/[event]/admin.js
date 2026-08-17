@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import HomepageView from "../../components/HomepageView";
+import GuestCoverView, { COVER_STYLES } from "../../components/GuestCoverView";
 import { compressFile } from "../../lib/compressImage";
 
 export default function Admin() {
@@ -507,16 +508,26 @@ function SettingsTab({ event, adminKey }) {
 
   if (!form) return <p>Memuat...</p>;
 
-  const theme = form.theme || {};
-  const previewBg = theme.secondary || "#f4ede4";
-  const previewText = theme.text || "#2b2b2b";
-  const previewAccent = theme.accent || "#d4af37";
-  const previewPrimary = theme.primary || "#7a1f2b";
-
   return (
     <div className="settings-layout">
       <div>
-      <label className="field-label">Nama Pasangan</label>
+      <label className="field-label">Gaya Halaman Tamu</label>
+      <select
+        value={form.coverStyle || "luxury-minimal"}
+        onChange={(e) => set("coverStyle", e.target.value)}
+        style={{ marginBottom: 6, width: "100%", padding: "12px 14px", borderRadius: 12, border: "2px solid #e5ddd0" }}
+      >
+        {COVER_STYLES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+      <p className="hp-tip">Ini gaya tampilan halaman pertama yang dilihat tamu saat scan barcode undangan. Lihat pratinjaunya di kanan, update langsung tiap ganti pilihan.</p>
+
+      <label className="field-label" style={{ marginTop: 16 }}>
+        Nama Pasangan
+      </label>
       <input type="text" value={form.coupleName || ""} onChange={(e) => set("coupleName", e.target.value)} />
 
       <label className="field-label">Tanggal</label>
@@ -599,27 +610,8 @@ function SettingsTab({ event, adminKey }) {
 
       <div className="settings-preview">
         <div className="settings-preview-label">Pratinjau Halaman Tamu</div>
-        <div
-          className="settings-preview-inner"
-          style={{ background: previewBg, color: previewText, fontFamily: form.fontBody || BODY_FONTS[0].value }}
-        >
-          {form.heroImageUrl && (
-            <img src={form.heroImageUrl} className="settings-preview-hero" alt="hero preview" />
-          )}
-          <div className="settings-preview-kicker" style={{ color: previewAccent }}>
-            {form.kickerText || "Virtual Photobooth"}
-          </div>
-          <h2
-            className="settings-preview-name"
-            style={{ fontFamily: form.fontHeading || HEADING_FONTS[0].value, color: previewPrimary }}
-          >
-            {form.coupleName || "Nama Pasangan"}
-          </h2>
-          <p className="settings-preview-date">{form.weddingDate || "Tanggal Pernikahan"}</p>
-          <p className="settings-preview-msg">{form.welcomeMessage || "Pesan sambutan untuk tamu"}</p>
-          <span className="settings-preview-btn" style={{ background: previewPrimary, color: "#fff" }}>
-            {form.startButtonLabel || "Mulai Photobooth"}
-          </span>
+        <div className="settings-preview-inner" style={{ padding: 0, overflow: "hidden" }}>
+          <GuestCoverView site={form} interactive={false} />
         </div>
       </div>
     </div>
